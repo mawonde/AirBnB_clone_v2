@@ -9,6 +9,7 @@ from sqlalchemy.orm import relationship
 
 class User(BaseModel, Base):
   """This class defines a user by various attributes"""
+
   __tablename__ = "users"
 
   if getenv("HBNB_TYPE_STORAGE") == "db":
@@ -20,7 +21,6 @@ class User(BaseModel, Base):
     review = relationship("Review", cascade="all, delete", backref="user")
 
   else:
-
     email = ''
     password = ''
     first_name = ''

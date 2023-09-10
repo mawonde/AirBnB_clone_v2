@@ -2,43 +2,39 @@
 """
 Fabric script to distribute an archive to web servers and deploy it
 """
-from fabric.api import env, put, run, local
+from fabric.api import env, put, run
 from os.path import exists
+import shlex
 
 env.hosts = ['100.26.11.65', '54.90.23.236']  # Replace with your server IPs
 env.user = 'ubuntu'  # Replace with your SSH username
 
 
 def do_deploy(archive_path):
+  """ Deploys """
   if not exists(archive_path):
     return False
-
   try:
-    # Uploads the archive to /tmp/ directory on the server
-    put(archive_path, '/tmp/')
+    name = archive_path.replace('/', ' ')
+    name = shlex.split(name)
+    name = name[-1]
 
-    # Get the archive filename without extension
-    archive_filename = archive_path.split('/')[-1]
-    archive_name = archive_filename.split('.')[0]
+    web_name = name.replace('.', ' ')
+    web_name = shlex.split(web_name)
+    web_name = web_name[0]
 
-    # Create the folder /data/web_static/releases/<archive_name>
-    run('mkdir -p /data/web_static/releases/{}/'.format(archive_name))
+    releases_path = "/data/web_static/releases/{}/".format(web_name)
+    tmp_path = "/tmp/{}".format(name)
 
-    # Uncompress the archive into /data/web_static/releases/<archive_name>
-    run('tar -xzf /tmp/{} -C /data/web_static/releases/{}/'.format(
-      archive_filename, archive_name))
-
-    # Remove the uploaded archive from /tmp/
-    run('rm /tmp/{}'.format(archive_filename))
-
-    # Delete the current symbolic link if it exists
-    run('rm -rf /data/web_static/current')
-
-    # Create a new symbolic link /data/web_static/current linked to the new version
-    run('ln -s /data/web_static/releases/{}/ /data/web_static/current'.format(
-      archive_name))
-    print("Deployment successful!")
+    put(archive_path, "/tmp/")
+    run("mkdir -p {}".format(releases_path))
+    run("tar -xzf {} -C {}".format(tmp_path, releases_path))
+    run("rm {}".format(tmp_path))
+    run("mv {}web_static/* {}".format(releases_path, releases_path))
+    run("rm -rf {}web_static".format(releases_path))
+    run("rm -rf /data/web_static/current")
+    run("ln -s {} /data/web_static/current".format(releases_path))
+    print("New version deployed!")
     return True
-
-  except Exception as e:
+  except:
     return False
